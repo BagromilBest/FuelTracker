@@ -1,8 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue';
-import axios from 'axios';
+import api from '../services/api';
 
-const api = axios.create({ baseURL: '/api' });
 const cycles = ref([]);
 const selectedCycle = ref(null);
 const stats = ref(null);

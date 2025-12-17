@@ -6,6 +6,7 @@ const store = useAppStore();
 const settingsForm = ref({ currency: 'CZK', fuel_price: 35.5 });
 const userForm = ref({ name: '', color: '#3498db' });
 const message = ref('');
+const isError = ref(false);
 
 onMounted(() => {
   if (store.settings) {
@@ -22,13 +23,16 @@ async function updateSettings() {
     });
     if (response.ok) {
       await store.fetchInit();
+      isError.value = false;
       message.value = 'Settings updated successfully!';
       setTimeout(() => message.value = '', 3000);
     } else {
       const error = await response.json();
+      isError.value = true;
       message.value = `Error updating settings: ${error.detail || 'Unknown error'}`;
     }
   } catch (e) {
+    isError.value = true;
     message.value = `Error updating settings: ${e.message || 'Network error'}`;
   }
 }
@@ -37,9 +41,11 @@ async function addUser() {
   try {
     await store.addUser(userForm.value.name, userForm.value.color);
     userForm.value = { name: '', color: '#3498db' };
+    isError.value = false;
     message.value = 'User added successfully!';
     setTimeout(() => message.value = '', 3000);
   } catch (e) {
+    isError.value = true;
     message.value = `Error adding user: ${e.response?.data?.detail || e.message || 'Unknown error'}`;
   }
 }
@@ -51,7 +57,7 @@ async function addUser() {
 
     <div class="card">
       <h3>General Settings</h3>
-      <p v-if="message" style="color: green; margin-bottom: 10px;">{{ message }}</p>
+      <p v-if="message" :class="isError ? 'error-msg' : 'success-msg'">{{ message }}</p>
       
       <label>Currency</label>
       <input type="text" v-model="settingsForm.currency" placeholder="e.g., CZK, USD">
