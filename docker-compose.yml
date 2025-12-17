@@ -15,7 +15,9 @@ services:
       - fueltracker-network
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
     container_name: fueltracker-frontend
     ports:
       - "5173:5173"
@@ -28,7 +30,6 @@ services:
       - backend
     networks:
       - fueltracker-network
-    command: npm run dev
 
 volumes:
   backend-data:
