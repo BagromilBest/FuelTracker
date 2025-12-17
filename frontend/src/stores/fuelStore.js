@@ -1,5 +1,7 @@
-// This file is kept for compatibility but the main store is in app.js
-// You can use either store - they provide similar functionality
+// Alternative store implementation with more explicit method names
+// The main application uses app.js for simplicity, but this store provides
+// a more modular approach if you want to refactor the application later
+// Note: DashboardView uses app.js store, so choose one and stick with it
 import { defineStore } from 'pinia'
 import api from '../services/api'
 

@@ -6,22 +6,34 @@ const api = axios.create({ baseURL: '/api' });
 const cycles = ref([]);
 const selectedCycle = ref(null);
 const stats = ref(null);
+const error = ref('');
 
 onMounted(async () => {
-  const response = await api.get('/cycles');
-  cycles.value = response.data;
+  try {
+    const response = await api.get('/cycles');
+    cycles.value = response.data;
+  } catch (e) {
+    error.value = `Failed to load cycles: ${e.response?.data?.detail || e.message}`;
+  }
 });
 
 async function viewCycleStats(cycleId) {
-  const response = await api.get(`/stats?cycle_id=${cycleId}`);
-  stats.value = response.data;
-  selectedCycle.value = cycles.value.find(c => c.id === cycleId);
+  try {
+    error.value = '';
+    const response = await api.get(`/stats?cycle_id=${cycleId}`);
+    stats.value = response.data;
+    selectedCycle.value = cycles.value.find(c => c.id === cycleId);
+  } catch (e) {
+    error.value = `Failed to load stats: ${e.response?.data?.detail || e.message}`;
+  }
 }
 </script>
 
 <template>
   <div class="container">
     <h1>History</h1>
+    
+    <div class="error-msg" v-if="error">{{ error }}</div>
     
     <div class="card">
       <h3>Past Tank Cycles</h3>
