@@ -24,9 +24,12 @@ async function updateSettings() {
       await store.fetchInit();
       message.value = 'Settings updated successfully!';
       setTimeout(() => message.value = '', 3000);
+    } else {
+      const error = await response.json();
+      message.value = `Error updating settings: ${error.detail || 'Unknown error'}`;
     }
   } catch (e) {
-    message.value = 'Error updating settings';
+    message.value = `Error updating settings: ${e.message || 'Network error'}`;
   }
 }
 
@@ -37,7 +40,7 @@ async function addUser() {
     message.value = 'User added successfully!';
     setTimeout(() => message.value = '', 3000);
   } catch (e) {
-    message.value = 'Error adding user';
+    message.value = `Error adding user: ${e.response?.data?.detail || e.message || 'Unknown error'}`;
   }
 }
 </script>
