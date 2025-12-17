@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    container_name: fueltracker-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/app:/app/app
+      - backend-data:/app
+    environment:
+      - PYTHONUNBUFFERED=1
+    networks:
+      - fueltracker-network
+
+  frontend:
+    build: ./frontend
+    container_name: fueltracker-frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+    depends_on:
+      - backend
+    networks:
+      - fueltracker-network
+    command: npm run dev
+
+volumes:
+  backend-data:
+
+networks:
+  fueltracker-network:
+    driver: bridge
