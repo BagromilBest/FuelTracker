@@ -72,8 +72,8 @@ async function submit() {
         <small>Enter at least 2 values to auto-calculate the 3rd</small>
       </div>
       
-      <div class="row">
-        <div class="col">
+      <div class="input-row">
+        <div class="input-col">
           <div class="input-group">
             <input 
               type="number" 
@@ -84,7 +84,7 @@ async function submit() {
             <span class="input-suffix">km</span>
           </div>
         </div>
-        <div class="col">
+        <div class="input-col">
           <div class="input-group">
             <input 
               type="number" 
@@ -95,7 +95,7 @@ async function submit() {
             <span class="input-suffix">L/100km</span>
           </div>
         </div>
-        <div class="col">
+        <div class="input-col">
           <div class="input-group">
             <input 
               type="number" 
@@ -172,9 +172,27 @@ async function submit() {
   padding-right: 60px;
 }
 
+.input-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--md-spacing-md);
+  margin-bottom: var(--md-spacing-md);
+}
+
+.input-col {
+  display: flex;
+  flex-direction: column;
+}
+
 button {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+@media (max-width: 768px) {
+  .input-row {
+    grid-template-columns: 1fr;
+  }
 }
 </style>
