@@ -151,6 +151,17 @@ input, select, textarea {
   margin-bottom: var(--md-spacing-sm);
 }
 
+/* Remove arrows from number inputs */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
 input:focus, select:focus, textarea:focus {
   outline: none;
   border-color: var(--md-sys-color-primary);
@@ -289,6 +300,7 @@ td {
   padding: 16px;
   border-bottom: 1px solid var(--md-sys-color-outline-variant);
   color: var(--md-sys-color-on-surface);
+  white-space: nowrap;
 }
 
 tbody tr {

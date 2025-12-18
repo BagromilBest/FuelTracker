@@ -159,23 +159,24 @@ async function submit() {
 
 .input-suffix {
   position: absolute;
-  right: 16px;
+  right: 12px;
   top: 50%;
   transform: translateY(-50%);
   color: var(--md-sys-color-on-surface-variant);
   font-size: 0.875rem;
   font-weight: 500;
   pointer-events: none;
+  white-space: nowrap;
 }
 
 .input-group input {
-  padding-right: 60px;
+  padding-right: 80px;
 }
 
 .input-row {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: var(--md-spacing-md);
+  gap: var(--md-spacing-lg);
   margin-bottom: var(--md-spacing-md);
 }
 
