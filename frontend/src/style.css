@@ -241,13 +241,16 @@ button.icon-button {
 /* Layout utilities */
 .row {
   display: flex;
-  gap: var(--md-spacing-md);
+  gap: var(--md-spacing-lg);
   flex-wrap: wrap;
+  align-items: stretch;
+  justify-content: center;
 }
 
 .col {
   flex: 1;
   min-width: 280px;
+  max-width: 600px;
 }
 
 /* Tables */
