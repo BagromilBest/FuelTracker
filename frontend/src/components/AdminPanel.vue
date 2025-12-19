@@ -98,8 +98,8 @@ async function changePassword() {
     return;
   }
   
-  if (!passwordForm.value.new_password || passwordForm.value.new_password.length < 1) {
-    showError('New password is required');
+  if (!passwordForm.value.new_password || passwordForm.value.new_password.length < 6) {
+    showError('New password must be at least 6 characters');
     return;
   }
   

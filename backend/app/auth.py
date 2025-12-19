@@ -10,6 +10,7 @@ from . import models, database
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # JWT settings
+# NOTE: In production, use environment variable: os.getenv("SECRET_KEY")
 SECRET_KEY = "your-secret-key-change-in-production-please-use-environment-variable"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
@@ -69,10 +70,14 @@ def get_current_admin(
 
 
 def ensure_admin(db: Session):
-    """Ensure admin exists with default password if not present."""
+    """Ensure admin exists with default password if not present.
+    
+    NOTE: Default password "Bagr123" is used as per requirements.
+    In production, consider requiring password setup on first run.
+    """
     admin = db.query(models.Admin).first()
     if not admin:
-        default_password = "Bagr123"
+        default_password = "Bagr123"  # As per requirements
         admin = models.Admin(password_hash=hash_password(default_password))
         db.add(admin)
         db.commit()

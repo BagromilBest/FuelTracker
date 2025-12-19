@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -190,7 +190,7 @@ def admin_login(login_data: schemas.AdminLogin, db: Session = Depends(database.g
     admin = auth.ensure_admin(db)
     
     if not auth.verify_password(login_data.password, admin.password_hash):
-        raise HTTPException(status_code=401, detail="Incorrect password")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect password")
     
     access_token = auth.create_access_token(data={"sub": "admin"})
     return {"access_token": access_token, "token_type": "bearer"}
@@ -204,7 +204,7 @@ def change_admin_password(
 ):
     """Change admin password."""
     if not auth.verify_password(password_data.old_password, current_admin.password_hash):
-        raise HTTPException(status_code=401, detail="Incorrect old password")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect old password")
     
     current_admin.password_hash = auth.hash_password(password_data.new_password)
     db.commit()
@@ -222,7 +222,7 @@ def get_user_rides_admin(
     if cycle_id:
         cycle = db.query(models.TankCycle).filter(models.TankCycle.id == cycle_id).first()
         if not cycle:
-            raise HTTPException(404, "Cycle not found")
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Cycle not found")
     else:
         cycle = get_active_cycle(db)
     
@@ -244,7 +244,7 @@ def update_ride_admin(
     """Update a specific ride."""
     ride = db.query(models.Ride).filter(models.Ride.id == ride_id).first()
     if not ride:
-        raise HTTPException(404, "Ride not found")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Ride not found")
     
     # Calculate missing values using logic
     distance = ride_update.distance_km if ride_update.distance_km is not None else ride.distance_km
@@ -272,7 +272,7 @@ def delete_ride_admin(
     """Delete a specific ride."""
     ride = db.query(models.Ride).filter(models.Ride.id == ride_id).first()
     if not ride:
-        raise HTTPException(404, "Ride not found")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Ride not found")
     
     db.delete(ride)
     db.commit()
@@ -288,10 +288,10 @@ def delete_cycle_admin(
     """Delete an entire tank cycle and all associated rides."""
     cycle = db.query(models.TankCycle).filter(models.TankCycle.id == cycle_id).first()
     if not cycle:
-        raise HTTPException(404, "Cycle not found")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Cycle not found")
     
     if cycle.is_active:
-        raise HTTPException(400, "Cannot delete active cycle")
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Cannot delete active cycle")
     
     # Delete all rides in this cycle
     db.query(models.Ride).filter(models.Ride.tank_cycle_id == cycle_id).delete()
