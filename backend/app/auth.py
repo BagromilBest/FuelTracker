@@ -30,6 +30,10 @@ def _pre_hash_password(password: str) -> str:
     - Prevents silent truncation of long passwords
     - Maintains security by using a cryptographic hash
     - Ensures consistent hashing regardless of password length
+    
+    NOTE: This pre-hashing was added to fix the 72-byte limit issue.
+    For new deployments, all passwords will use this pre-hashing.
+    The bcrypt layer still adds its own unique salt for each hash.
     """
     return hashlib.sha256(password.encode('utf-8')).hexdigest()
 
