@@ -8,7 +8,9 @@ export const useAppStore = defineStore('app', {
     users: [],
     settings: { currency: 'CZK', fuel_price: 0 },
     currentStats: null,
-    historyCycles: []
+    historyCycles: [],
+    isAdminAuthenticated: false,
+    adminToken: null
   }),
   actions: {
     async fetchInit() {
@@ -32,6 +34,21 @@ export const useAppStore = defineStore('app', {
     async addUser(name, color) {
         await api.post('/users', {name, color});
         await this.fetchInit();
+    },
+    async adminLogin(password) {
+      const response = await api.post('/admin/login', { password });
+      this.adminToken = response.data.access_token;
+      this.isAdminAuthenticated = true;
+      return response.data;
+    },
+    adminLogout() {
+      this.adminToken = null;
+      this.isAdminAuthenticated = false;
+    },
+    getAdminHeaders() {
+      return {
+        Authorization: `Bearer ${this.adminToken}`
+      };
     }
   }
 })
