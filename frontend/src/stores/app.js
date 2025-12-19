@@ -31,6 +31,11 @@ export const useAppStore = defineStore('app', {
       }
     },
     
+    async fetchUsers() {
+      const response = await api.get('/users');
+      this.users = response.data;
+    },
+    
     async fetchInit() {
       const [u, s, cs] = await Promise.all([
         api.get('/users'),
