@@ -78,9 +78,12 @@ def read_users(db: Session = Depends(database.get_db)):
 
 @app.post("/api/users", response_model=schemas.UserOut)
 def create_user(user: schemas.UserCreate, db: Session = Depends(database.get_db)):
-    # Check if user already exists
-    existing_user = db.query(models.User).filter(models.User.name == user.name).first()
-    if existing_user:
+    # Check if active user already exists with this name
+    existing_active_user = db.query(models.User).filter(
+        models.User.name == user.name,
+        models.User.is_active == True
+    ).first()
+    if existing_active_user:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User with this name already exists")
     
     # Hash password before storing
@@ -323,10 +326,11 @@ def update_user_admin(
     
     # Update fields if provided
     if user_update.name is not None:
-        # Check if name is already taken by another user
+        # Check if name is already taken by another active user
         existing_user = db.query(models.User).filter(
             models.User.name == user_update.name,
-            models.User.id != user_id
+            models.User.id != user_id,
+            models.User.is_active == True
         ).first()
         if existing_user:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "User with this name already exists")
