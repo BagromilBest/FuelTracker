@@ -412,13 +412,13 @@ const selectedUserName = computed(() => {
 .close-btn {
   width: auto;
   padding: var(--md-spacing-sm);
-  background: transparent;
-  color: var(--md-sys-color-on-surface);
+  background: #ef5350;
+  color: white;
   min-width: auto;
 }
 
 .close-btn:hover:not(:disabled) {
-  background: var(--md-sys-color-surface-container-highest);
+  background: #d32f2f;
 }
 
 .tabs {
