@@ -3,14 +3,16 @@ import { ref, onMounted } from 'vue';
 import { useAppStore } from '../stores/app';
 import AdminLogin from '../components/AdminLogin.vue';
 import AdminPanel from '../components/AdminPanel.vue';
+import DriverForm from '../components/DriverForm.vue';
 
 const store = useAppStore();
 const settingsForm = ref({ currency: 'CZK', fuel_price: 35.5 });
-const userForm = ref({ name: '', color: '#90CAF9' });
 const message = ref('');
 const isError = ref(false);
 const showAdminLogin = ref(false);
 const showAdminPanel = ref(false);
+const showDriverForm = ref(false);
+const editingDriver = ref(null);
 
 onMounted(() => {
   if (store.settings) {
@@ -41,16 +43,94 @@ async function updateSettings() {
   }
 }
 
-async function addUser() {
+function openDriverForm(driver = null) {
+  editingDriver.value = driver;
+  showDriverForm.value = true;
+}
+
+async function handleDriverSubmit(formData) {
   try {
-    await store.addUser(userForm.value.name, userForm.value.color);
-    userForm.value = { name: '', color: '#90CAF9' };
+    if (editingDriver.value) {
+      // Edit existing driver (requires admin)
+      if (!store.isAdminAuthenticated) {
+        isError.value = true;
+        message.value = 'Admin authentication required to edit drivers';
+        return;
+      }
+      
+      const updateData = {
+        name: formData.name,
+        color: formData.color
+      };
+      if (formData.password) {
+        updateData.password = formData.password;
+      }
+      
+      const response = await fetch(`/api/admin/users/${editingDriver.value.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${store.adminToken}`
+        },
+        body: JSON.stringify(updateData)
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Failed to update driver');
+      }
+      
+      await store.fetchInit();
+      showDriverForm.value = false;
+      editingDriver.value = null;
+      isError.value = false;
+      message.value = 'Driver updated successfully!';
+      setTimeout(() => message.value = '', 3000);
+    } else {
+      // Create new driver
+      await store.addUser(formData.name, formData.color, formData.password);
+      showDriverForm.value = false;
+      isError.value = false;
+      message.value = 'Driver added successfully!';
+      setTimeout(() => message.value = '', 3000);
+    }
+  } catch (e) {
+    isError.value = true;
+    message.value = `Error: ${e.message || 'Unknown error'}`;
+  }
+}
+
+async function deleteDriver(driver) {
+  if (!store.isAdminAuthenticated) {
+    isError.value = true;
+    message.value = 'Admin authentication required to delete drivers';
+    return;
+  }
+  
+  if (!confirm(`Are you sure you want to delete driver "${driver.name}"? This action cannot be undone.`)) {
+    return;
+  }
+  
+  try {
+    const response = await fetch(`/api/admin/users/${driver.id}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${store.adminToken}`
+      }
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to delete driver');
+    }
+    
+    await store.fetchInit();
     isError.value = false;
-    message.value = 'User added successfully!';
+    message.value = 'Driver deleted successfully!';
     setTimeout(() => message.value = '', 3000);
   } catch (e) {
     isError.value = true;
-    message.value = `Error adding user: ${e.response?.data?.detail || e.message || 'Unknown error'}`;
+    message.value = `Error deleting driver: ${e.message || 'Unknown error'}`;
   }
 }
 
@@ -148,42 +228,40 @@ function handleAdminPanelClose() {
           <h3>Manage Drivers</h3>
         </div>
         
-        <div v-if="store.users.length > 0" class="users-section">
-          <h4>Current Drivers</h4>
-          <div class="users-list">
-            <div v-for="user in store.users" :key="user.id" class="user-item">
+        <div v-if="store.users.length > 0" class="drivers-section">
+          <div v-for="user in store.users" :key="user.id" class="driver-row">
+            <div class="driver-info">
               <span class="user-color-dot" :style="{ background: user.color }"></span>
               <span class="user-name">{{ user.name }}</span>
             </div>
+            <div class="driver-actions" v-if="store.isAdminAuthenticated">
+              <button @click="openDriverForm(user)" class="icon-btn edit-btn" title="Edit driver">
+                <svg viewBox="0 0 24 24" fill="none" style="width: 18px; height: 18px;">
+                  <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" fill="currentColor"/>
+                </svg>
+              </button>
+              <button @click="deleteDriver(user)" class="icon-btn delete-btn" title="Delete driver">
+                <svg viewBox="0 0 24 24" fill="none" style="width: 18px; height: 18px;">
+                  <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" fill="currentColor"/>
+                </svg>
+              </button>
+            </div>
           </div>
+        </div>
+        
+        <div v-else class="empty-state">
+          <svg viewBox="0 0 24 24" fill="none" style="width: 48px; height: 48px; color: var(--md-sys-color-on-surface-variant); opacity: 0.5;">
+            <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" fill="currentColor"/>
+          </svg>
+          <p>No drivers yet</p>
         </div>
 
-        <div class="form-section">
-          <h4>Add New Driver</h4>
-          
-          <label>Driver Name</label>
-          <input 
-            type="text" 
-            v-model="userForm.name" 
-            placeholder="Enter driver name"
-            maxlength="50"
-          >
-          
-          <label>Identification Color</label>
-          <div class="color-picker-wrapper">
-            <input type="color" v-model="userForm.color" class="color-picker">
-            <div class="color-preview" :style="{ background: userForm.color }"></div>
-            <span class="color-value">{{ userForm.color }}</span>
-          </div>
-          <small>Choose a unique color to identify this driver in reports</small>
-          
-          <button @click="addUser" :disabled="!userForm.name">
-            <svg viewBox="0 0 24 24" fill="none" style="width: 18px; height: 18px; margin-right: 8px;">
-              <path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" fill="currentColor"/>
-            </svg>
-            Add Driver
-          </button>
-        </div>
+        <button @click="openDriverForm()" class="add-driver-btn">
+          <svg viewBox="0 0 24 24" fill="none" style="width: 20px; height: 20px; margin-right: 8px;">
+            <path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" fill="currentColor"/>
+          </svg>
+          Add New Driver
+        </button>
       </div>
     </div>
 
@@ -198,6 +276,14 @@ function handleAdminPanelClose() {
     <AdminPanel
       v-if="showAdminPanel"
       @close="handleAdminPanelClose"
+    />
+
+    <!-- Driver Form Modal -->
+    <DriverForm
+      v-if="showDriverForm"
+      :driver="editingDriver"
+      @submit="handleDriverSubmit"
+      @cancel="showDriverForm = false; editingDriver = null"
     />
   </div>
 </template>
@@ -337,6 +423,100 @@ button {
 }
 
 .admin-access-btn:hover {
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+}
+
+.drivers-section {
+  margin-bottom: var(--md-spacing-lg);
+}
+
+.driver-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--md-spacing-md);
+  margin-bottom: var(--md-spacing-sm);
+  background: var(--md-sys-color-surface-container);
+  border-radius: var(--md-shape-corner-medium);
+  transition: background 0.2s;
+}
+
+.driver-row:hover {
+  background: var(--md-sys-color-surface-container-high);
+}
+
+.driver-row:last-child {
+  margin-bottom: 0;
+}
+
+.driver-info {
+  display: flex;
+  align-items: center;
+  gap: var(--md-spacing-md);
+}
+
+.user-name {
+  font-weight: 500;
+  font-size: 1rem;
+}
+
+.driver-actions {
+  display: flex;
+  gap: var(--md-spacing-sm);
+}
+
+.icon-btn {
+  background: transparent;
+  border: none;
+  padding: 8px;
+  border-radius: var(--md-shape-corner-small);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.edit-btn {
+  color: var(--md-sys-color-primary);
+}
+
+.edit-btn:hover {
+  background: var(--md-sys-color-primary-container);
+}
+
+.delete-btn {
+  color: var(--md-sys-color-error);
+}
+
+.delete-btn:hover {
+  background: var(--md-sys-color-error-container);
+}
+
+.empty-state {
+  text-align: center;
+  padding: var(--md-spacing-xl);
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.empty-state p {
+  margin-top: var(--md-spacing-md);
+  font-size: 0.875rem;
+}
+
+.add-driver-btn {
+  width: 100%;
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  margin-top: var(--md-spacing-md);
+}
+
+.add-driver-btn:hover {
   background: var(--md-sys-color-primary);
   color: var(--md-sys-color-on-primary);
 }

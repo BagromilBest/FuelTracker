@@ -31,8 +31,8 @@ export const useAppStore = defineStore('app', {
       await api.post('/cycles/close');
       await this.fetchInit();
     },
-    async addUser(name, color) {
-        await api.post('/users', {name, color});
+    async addUser(name, color, password) {
+        await api.post('/users', {name, color, password});
         await this.fetchInit();
     },
     async adminLogin(password) {
