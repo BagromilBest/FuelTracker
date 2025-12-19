@@ -113,3 +113,62 @@ def ensure_admin(db: Session):
         db.commit()
         db.refresh(admin)
     return admin
+
+
+def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(database.get_db)
+):
+    """Dependency to verify user authentication."""
+    token = credentials.credentials
+    payload = verify_token(token)
+    
+    user_id = payload.get("user_id")
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token",
+        )
+    
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user or not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found or inactive",
+        )
+    
+    return user
+
+
+def get_current_user_or_admin(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(database.get_db)
+):
+    """Dependency to verify user or admin authentication."""
+    token = credentials.credentials
+    payload = verify_token(token)
+    
+    is_admin = payload.get("sub") == "admin"
+    user_id = payload.get("user_id")
+    
+    if is_admin:
+        admin = db.query(models.Admin).first()
+        if not admin:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Admin not found",
+            )
+        return {"type": "admin", "admin": admin}
+    elif user_id:
+        user = db.query(models.User).filter(models.User.id == user_id).first()
+        if not user or not user.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User not found or inactive",
+            )
+        return {"type": "user", "user": user}
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token",
+        )

@@ -104,3 +104,15 @@ class RideUpdate(BaseModel):
     distance_km: Optional[float] = Field(None, gt=0)
     consumption_l100km: Optional[float] = Field(None, gt=0)
     fuel_liters: Optional[float] = Field(None, gt=0)
+
+# --- User Auth ---
+class UserLogin(BaseModel):
+    user_id: int
+    password: str = Field(min_length=1)
+
+class UserToken(BaseModel):
+    access_token: str
+    token_type: str
+    user_id: int
+    user_name: str
+    is_admin: bool = False

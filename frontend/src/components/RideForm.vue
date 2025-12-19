@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import { useAppStore } from '../stores/app';
 
 const store = useAppStore();
@@ -28,6 +28,20 @@ const form = ref({
 const error = ref('');
 const success = ref(false);
 
+// Auto-select current user if not admin
+onMounted(() => {
+  if (!store.isAdmin && store.currentUser) {
+    form.value.user_id = store.currentUser.id;
+  }
+});
+
+// Watch for changes in authentication state
+watch(() => store.currentUser, (newUser) => {
+  if (!store.isAdmin && newUser) {
+    form.value.user_id = newUser.id;
+  }
+});
+
 const canSubmit = computed(() => {
     const filled = [form.value.distance_km, form.value.consumption_l100km, form.value.fuel_liters].filter(x => x !== '').length;
     return form.value.user_id && filled >= 2;
@@ -50,6 +64,11 @@ async function submit() {
     form.value.consumption_l100km = '';
     form.value.fuel_liters = '';
     form.value.timestamp = getLocalDatetimeString();
+    
+    // Keep user selected (either current user or admin's choice)
+    if (!store.isAdmin && store.currentUser) {
+      form.value.user_id = store.currentUser.id;
+    }
     
     success.value = true;
     setTimeout(() => success.value = false, 3000);
@@ -77,9 +96,9 @@ async function submit() {
     
     <div class="form-content">
       <label>Driver</label>
-      <select v-model="form.user_id">
+      <select v-model="form.user_id" :disabled="!store.isAdmin">
         <option disabled value="">Select User</option>
-        <option v-for="u in store.users" :key="u.id" :value="u.id">
+        <option v-for="u in store.availableDrivers" :key="u.id" :value="u.id">
           {{ u.name }}
         </option>
       </select>

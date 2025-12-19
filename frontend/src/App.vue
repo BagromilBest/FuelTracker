@@ -1,18 +1,35 @@
 <script setup>
 import { onMounted } from 'vue';
 import { useAppStore } from './stores/app';
+import { useRouter } from 'vue-router';
 import NavBar from './components/NavBar.vue';
 
 const store = useAppStore();
+const router = useRouter();
 
-onMounted(() => {
-  store.fetchInit();
+onMounted(async () => {
+  // Restore authentication from localStorage
+  store.restoreAuth();
+  
+  // If authenticated, fetch initial data
+  if (store.isAuthenticated) {
+    try {
+      await store.fetchInit();
+    } catch (error) {
+      // If fetch fails (e.g., token expired), logout and redirect to login
+      store.logout();
+      router.push('/login');
+    }
+  } else {
+    // Not authenticated, redirect to login
+    router.push('/login');
+  }
 });
 </script>
 
 <template>
   <div class="app-root">
-    <NavBar />
+    <NavBar v-if="store.isAuthenticated" />
     <main class="app-main">
       <router-view v-slot="{ Component }">
         <transition name="fade" mode="out-in">

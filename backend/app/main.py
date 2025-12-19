@@ -95,6 +95,83 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(database.get_db)
     return db_user
 
 
+@app.post("/api/users/login", response_model=schemas.UserToken)
+def user_login(login_data: schemas.UserLogin, db: Session = Depends(database.get_db)):
+    """Authenticate user and return JWT token."""
+    user = db.query(models.User).filter(models.User.id == login_data.user_id).first()
+    
+    if not user or not user.is_active:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+    
+    if not auth.verify_password(login_data.password, user.password_hash):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+    
+    access_token = auth.create_access_token(data={"user_id": user.id})
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user_id": user.id,
+        "user_name": user.name,
+        "is_admin": False
+    }
+
+
+@app.post("/api/admin/login", response_model=schemas.UserToken)
+def admin_login(login_data: schemas.AdminLogin, db: Session = Depends(database.get_db)):
+    """Authenticate admin and return JWT token."""
+    admin = auth.ensure_admin(db)
+    
+    if not auth.verify_password(login_data.password, admin.password_hash):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect password")
+    
+    access_token = auth.create_access_token(data={"sub": "admin"})
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user_id": 0,
+        "user_name": "Admin",
+        "is_admin": True
+    }
+def create_ride(ride_in: schemas.RideInput, db: Session = Depends(database.get_db)):
+    # 1. Calc/Validate Math
+    d, c, f = logic.calculate_ride_data(ride_in.distance_km, ride_in.consumption_l100km, ride_in.fuel_liters)
+
+    # 2. Get Active Cycle
+    cycle = get_active_cycle(db)
+
+    # 3. Save
+    db_ride = models.Ride(
+        user_id=ride_in.user_id,
+        tank_cycle_id=cycle.id,
+        timestamp=ride_in.timestamp,
+        distance_km=d,
+        consumption_l100km=c,
+        fuel_liters=f
+    )
+    db.add(db_ride)
+    db.commit()
+    db.refresh(db_ride)
+    return db_ride
+
+
+@app.post("/api/admin/login", response_model=schemas.UserToken)
+def admin_login(login_data: schemas.AdminLogin, db: Session = Depends(database.get_db)):
+    """Authenticate admin and return JWT token."""
+    admin = auth.ensure_admin(db)
+    
+    if not auth.verify_password(login_data.password, admin.password_hash):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect password")
+    
+    access_token = auth.create_access_token(data={"sub": "admin"})
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user_id": 0,
+        "user_name": "Admin",
+        "is_admin": True
+    }
+
+
 @app.post("/api/rides", response_model=schemas.RideOut)
 def create_ride(ride_in: schemas.RideInput, db: Session = Depends(database.get_db)):
     # 1. Calc/Validate Math
@@ -193,18 +270,6 @@ def get_stats(cycle_id: Optional[int] = None, db: Session = Depends(database.get
 
 
 # --- Admin Routes ---
-
-@app.post("/api/admin/login", response_model=schemas.AdminToken)
-def admin_login(login_data: schemas.AdminLogin, db: Session = Depends(database.get_db)):
-    """Authenticate admin and return JWT token."""
-    admin = auth.ensure_admin(db)
-    
-    if not auth.verify_password(login_data.password, admin.password_hash):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect password")
-    
-    access_token = auth.create_access_token(data={"sub": "admin"})
-    return {"access_token": access_token, "token_type": "bearer"}
-
 
 @app.post("/api/admin/password")
 def change_admin_password(
