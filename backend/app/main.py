@@ -78,7 +78,14 @@ def read_users(db: Session = Depends(database.get_db)):
 
 @app.post("/api/users", response_model=schemas.UserOut)
 def create_user(user: schemas.UserCreate, db: Session = Depends(database.get_db)):
-    db_user = models.User(name=user.name, color=user.color)
+    # Check if user already exists
+    existing_user = db.query(models.User).filter(models.User.name == user.name).first()
+    if existing_user:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User with this name already exists")
+    
+    # Hash password before storing
+    password_hash = auth.hash_password(user.password)
+    db_user = models.User(name=user.name, color=user.color, password_hash=password_hash)
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
@@ -300,6 +307,57 @@ def delete_cycle_admin(
     db.delete(cycle)
     db.commit()
     return {"message": "Cycle deleted successfully"}
+
+
+@app.put("/api/admin/users/{user_id}", response_model=schemas.UserOut)
+def update_user_admin(
+    user_id: int,
+    user_update: schemas.UserUpdate,
+    db: Session = Depends(database.get_db),
+    current_admin: models.Admin = Depends(auth.get_current_admin)
+):
+    """Update a driver's information."""
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
+    
+    # Update fields if provided
+    if user_update.name is not None:
+        # Check if name is already taken by another user
+        existing_user = db.query(models.User).filter(
+            models.User.name == user_update.name,
+            models.User.id != user_id
+        ).first()
+        if existing_user:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "User with this name already exists")
+        user.name = user_update.name
+    
+    if user_update.color is not None:
+        user.color = user_update.color
+    
+    if user_update.password is not None:
+        user.password_hash = auth.hash_password(user_update.password)
+    
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+@app.delete("/api/admin/users/{user_id}")
+def delete_user_admin(
+    user_id: int,
+    db: Session = Depends(database.get_db),
+    current_admin: models.Admin = Depends(auth.get_current_admin)
+):
+    """Delete a driver (soft delete by setting is_active to False)."""
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
+    
+    # Soft delete - set is_active to False
+    user.is_active = False
+    db.commit()
+    return {"message": "User deleted successfully"}
 
 
 # Static Files (Frontend)

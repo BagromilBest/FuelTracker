@@ -18,7 +18,12 @@ class UserBase(BaseModel):
     color: str = Field(pattern=r"^#[0-9a-fA-F]{6}$")
 
 class UserCreate(UserBase):
-    pass
+    password: str = Field(min_length=1)
+
+class UserUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=50)
+    color: Optional[str] = Field(None, pattern=r"^#[0-9a-fA-F]{6}$")
+    password: Optional[str] = Field(None, min_length=1)
 
 class UserOut(UserBase):
     id: int
