@@ -15,6 +15,9 @@ const message = ref('');
 const isError = ref(false);
 const loading = ref(false);
 
+// Track which fields have been manually changed
+const editedFields = ref(new Set());
+
 // Password change form
 const passwordForm = ref({
   old_password: '',
@@ -52,11 +55,40 @@ function startEdit(ride) {
     consumption_l100km: ride.consumption_l100km,
     fuel_liters: ride.fuel_liters
   };
+  editedFields.value = new Set();
 }
 
 function cancelEdit() {
   editingRide.value = null;
   editForm.value = {};
+  editedFields.value = new Set();
+}
+
+function onFieldChange(fieldName) {
+  editedFields.value.add(fieldName);
+  
+  // Auto-calculate the third value if two are provided
+  const { distance_km, consumption_l100km, fuel_liters } = editForm.value;
+  
+  const hasDistance = distance_km !== null && distance_km !== undefined && distance_km > 0;
+  const hasConsumption = consumption_l100km !== null && consumption_l100km !== undefined && consumption_l100km > 0;
+  const hasFuel = fuel_liters !== null && fuel_liters !== undefined && fuel_liters > 0;
+  
+  const count = [hasDistance, hasConsumption, hasFuel].filter(Boolean).length;
+  
+  if (count === 2) {
+    // Calculate the missing value
+    if (!hasDistance && hasConsumption && hasFuel) {
+      // Calculate distance: d = (f * 100) / c
+      editForm.value.distance_km = parseFloat(((fuel_liters * 100) / consumption_l100km).toFixed(2));
+    } else if (!hasConsumption && hasDistance && hasFuel) {
+      // Calculate consumption: c = (f * 100) / d
+      editForm.value.consumption_l100km = parseFloat(((fuel_liters * 100) / distance_km).toFixed(2));
+    } else if (!hasFuel && hasDistance && hasConsumption) {
+      // Calculate fuel: f = (d * c) / 100
+      editForm.value.fuel_liters = parseFloat(((distance_km * consumption_l100km) / 100).toFixed(2));
+    }
+  }
 }
 
 async function saveEdit(rideId) {
@@ -67,6 +99,8 @@ async function saveEdit(rideId) {
     });
     showSuccess('Ride updated successfully');
     await loadUserRides();
+    // Refresh dashboard stats
+    await store.fetchInit();
     cancelEdit();
   } catch (e) {
     showError(`Failed to update ride: ${e.response?.data?.detail || e.message}`);
@@ -85,6 +119,8 @@ async function deleteRide(rideId) {
     });
     showSuccess('Ride deleted successfully');
     await loadUserRides();
+    // Refresh dashboard stats
+    await store.fetchInit();
   } catch (e) {
     showError(`Failed to delete ride: ${e.response?.data?.detail || e.message}`);
   } finally {
@@ -230,15 +266,15 @@ const selectedUserName = computed(() => {
                 <div class="edit-fields">
                   <div class="edit-field">
                     <label>Distance (km)</label>
-                    <input type="number" step="0.1" v-model.number="editForm.distance_km" min="0">
+                    <input type="number" step="0.1" v-model.number="editForm.distance_km" min="0" @input="onFieldChange('distance_km')">
                   </div>
                   <div class="edit-field">
                     <label>Consumption (L/100km)</label>
-                    <input type="number" step="0.1" v-model.number="editForm.consumption_l100km" min="0">
+                    <input type="number" step="0.1" v-model.number="editForm.consumption_l100km" min="0" @input="onFieldChange('consumption_l100km')">
                   </div>
                   <div class="edit-field">
                     <label>Fuel (L)</label>
-                    <input type="number" step="0.1" v-model.number="editForm.fuel_liters" min="0">
+                    <input type="number" step="0.1" v-model.number="editForm.fuel_liters" min="0" @input="onFieldChange('fuel_liters')">
                   </div>
                 </div>
                 <div class="edit-actions">
@@ -394,35 +430,41 @@ const selectedUserName = computed(() => {
 
 .tabs {
   display: flex;
+  padding: var(--md-spacing-md) var(--md-spacing-lg);
+  gap: var(--md-spacing-xs);
+  background: var(--md-sys-color-surface-container-low);
   border-bottom: 1px solid var(--md-sys-color-outline-variant);
-  padding: 0 var(--md-spacing-lg);
-  gap: var(--md-spacing-sm);
 }
 
 .tab-btn {
-  background: transparent;
-  color: var(--md-sys-color-on-surface-variant);
-  border: none;
-  padding: var(--md-spacing-md) var(--md-spacing-lg);
   display: flex;
   align-items: center;
   gap: var(--md-spacing-sm);
+  padding: var(--md-spacing-sm) var(--md-spacing-md);
+  border-radius: var(--md-shape-corner-large);
+  color: var(--md-sys-color-on-surface-variant);
+  background: transparent;
+  border: none;
+  font-weight: 500;
+  font-size: 0.875rem;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
-  border-bottom: 2px solid transparent;
-  transition: all 0.2s ease;
   min-width: auto;
   width: auto;
-  font-weight: 500;
 }
 
-.tab-btn:hover {
+.tab-btn:hover:not(.active) {
+  background: var(--md-sys-color-surface-container-highest);
   color: var(--md-sys-color-on-surface);
-  background: var(--md-sys-color-surface-container-high);
 }
 
 .tab-btn.active {
+  background: var(--md-sys-color-primary-container);
   color: var(--md-sys-color-primary);
-  border-bottom-color: var(--md-sys-color-primary);
+}
+
+.tab-btn.active:hover {
+  background: var(--md-sys-color-primary-container);
 }
 
 .panel-body {
