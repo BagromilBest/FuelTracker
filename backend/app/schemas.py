@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, timezone
 
 # --- Settings ---
 class SettingBase(BaseModel):
@@ -37,7 +37,8 @@ class RideInput(BaseModel):
     @field_validator('timestamp')
     def validate_timestamp(cls, v):
         # Prevent future dates significantly ahead (e.g. clock skew tolerance)
-        if v > datetime.now():
+        now = datetime.now(timezone.utc) if v.tzinfo else datetime.now()
+        if v > now:
             # Allow small skew, but generally log logic handles current time
             pass
         return v
