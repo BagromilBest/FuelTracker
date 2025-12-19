@@ -37,7 +37,7 @@ class RideInput(BaseModel):
     @field_validator('timestamp')
     def validate_timestamp(cls, v):
         # Prevent future dates significantly ahead (e.g. clock skew tolerance)
-        if v > datetime.utcnow():
+        if v > datetime.now():
             # Allow small skew, but generally log logic handles current time
             pass
         return v

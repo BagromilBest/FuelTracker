@@ -3,8 +3,26 @@ import { ref, computed } from 'vue';
 import { useAppStore } from '../stores/app';
 
 const store = useAppStore();
+
+function getLocalDatetimeString() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  return `${day}.${month}.${year} ${hours}:${minutes}`;
+}
+
+function parseDisplayDatetime(displayStr) {
+  const match = displayStr.match(/^(\d{2})\.(\d{2})\.(\d{4})\s+(\d{2}):(\d{2})$/);
+  if (!match) return new Date().toISOString();
+  const [, day, month, year, hours, minutes] = match;
+  return new Date(year, month - 1, day, hours, minutes).toISOString();
+}
+
 const form = ref({
-  user_id: '', timestamp: new Date().toISOString().slice(0, 16),
+  user_id: '', timestamp: getLocalDatetimeString(),
   distance_km: '', consumption_l100km: '', fuel_liters: ''
 });
 const error = ref('');
@@ -20,16 +38,18 @@ async function submit() {
     error.value = '';
     success.value = false;
     const payload = { ...form.value };
+    payload.timestamp = parseDisplayDatetime(form.value.timestamp);
     // Convert empty strings to null for backend logic
     if (payload.distance_km === '') payload.distance_km = null;
     if (payload.consumption_l100km === '') payload.consumption_l100km = null;
     if (payload.fuel_liters === '') payload.fuel_liters = null;
 
     await store.addRide(payload);
-    // Reset numeric fields
+    // Reset numeric fields and update timestamp to current time
     form.value.distance_km = '';
     form.value.consumption_l100km = '';
     form.value.fuel_liters = '';
+    form.value.timestamp = getLocalDatetimeString();
     
     success.value = true;
     setTimeout(() => success.value = false, 3000);
@@ -65,7 +85,7 @@ async function submit() {
       </select>
       
       <label>Date & Time</label>
-      <input type="datetime-local" v-model="form.timestamp" />
+      <input type="text" v-model="form.timestamp" placeholder="DD.MM.YYYY HH:mm" />
 
       <label>Trip Details</label>
       <div class="form-info">

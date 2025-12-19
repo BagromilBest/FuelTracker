@@ -117,7 +117,7 @@ def get_cycles(db: Session = Depends(database.get_db)):
 def close_cycle(db: Session = Depends(database.get_db)):
     cycle = get_active_cycle(db)
     cycle.is_active = False
-    cycle.end_date = datetime.utcnow()
+    cycle.end_date = datetime.now()
 
     new_cycle = models.TankCycle()  # Auto creates active=True
     db.add(new_cycle)
