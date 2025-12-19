@@ -1,9 +1,18 @@
 <script setup>
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
+import { useAppStore } from '../stores/app';
 import { computed } from 'vue';
 
 const route = useRoute();
+const router = useRouter();
+const store = useAppStore();
+
 const isActive = (name) => computed(() => route.name === name);
+
+function handleLogout() {
+  store.logout();
+  router.push('/login');
+}
 </script>
 
 <template>
@@ -40,6 +49,24 @@ const isActive = (name) => computed(() => route.name === name);
           <span>Settings</span>
         </router-link>
       </div>
+      
+      <div class="nav-user">
+        <div class="user-info">
+          <svg class="user-icon" viewBox="0 0 24 24" fill="none">
+            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" fill="currentColor"/>
+          </svg>
+          <div class="user-details">
+            <span class="user-name">{{ store.currentUser?.name }}</span>
+            <span class="user-role" v-if="store.isAdmin">Admin</span>
+            <span class="user-role" v-else>Driver</span>
+          </div>
+        </div>
+        <button class="logout-button" @click="handleLogout" title="Logout">
+          <svg viewBox="0 0 24 24" fill="none" style="width: 20px; height: 20px;">
+            <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5-5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z" fill="currentColor"/>
+          </svg>
+        </button>
+      </div>
     </div>
   </nav>
 </template>
@@ -63,6 +90,7 @@ const isActive = (name) => computed(() => route.name === name);
   align-items: center;
   justify-content: space-between;
   height: 64px;
+  gap: var(--md-spacing-lg);
 }
 
 .nav-brand {
@@ -87,6 +115,7 @@ const isActive = (name) => computed(() => route.name === name);
 .nav-links {
   display: flex;
   gap: var(--md-spacing-xs);
+  flex: 1;
 }
 
 .nav-link {
@@ -122,6 +151,67 @@ const isActive = (name) => computed(() => route.name === name);
   background: var(--md-sys-color-primary-container);
 }
 
+.nav-user {
+  display: flex;
+  align-items: center;
+  gap: var(--md-spacing-md);
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: var(--md-spacing-sm);
+  padding: var(--md-spacing-sm) var(--md-spacing-md);
+  background: var(--md-sys-color-surface-container-highest);
+  border-radius: var(--md-shape-corner-large);
+}
+
+.user-icon {
+  width: 24px;
+  height: 24px;
+  color: var(--md-sys-color-primary);
+}
+
+.user-details {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.user-name {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--md-sys-color-on-surface);
+}
+
+.user-role {
+  font-size: 0.75rem;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.logout-button {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid var(--md-sys-color-outline);
+  border-radius: 50%;
+  color: var(--md-sys-color-on-surface-variant);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin: 0;
+}
+
+.logout-button:hover {
+  background: var(--md-sys-color-error);
+  border-color: var(--md-sys-color-error);
+  color: white;
+  transform: translateY(0);
+}
+
 @media (max-width: 768px) {
   .nav-container {
     padding: 0 var(--md-spacing-md);
@@ -137,6 +227,10 @@ const isActive = (name) => computed(() => route.name === name);
   
   .nav-link {
     padding: var(--md-spacing-sm);
+  }
+  
+  .user-details {
+    display: none;
   }
 }
 </style>
