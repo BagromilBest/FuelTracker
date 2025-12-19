@@ -16,6 +16,7 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, index=True)
     color = Column(String)  # Hex code
+    password_hash = Column(String, nullable=False)
     is_active = Column(Boolean, default=True)
 
 
