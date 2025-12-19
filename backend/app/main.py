@@ -7,10 +7,14 @@ from typing import List, Optional
 import os
 from datetime import datetime
 
-from . import models, schemas, database, logic
+from . import models, schemas, database, logic, auth
 
 # Initialize DB
 models.Base.metadata.create_all(bind=database.engine)
+
+# Initialize default admin
+with next(database.get_db()) as db:
+    auth.ensure_admin(db)
 
 app = FastAPI(title="PiFuelTracker")
 
@@ -176,6 +180,126 @@ def get_stats(cycle_id: Optional[int] = None, db: Session = Depends(database.get
         total_cost=round(total_cost, 2),
         user_stats=user_stats_list
     )
+
+
+# --- Admin Routes ---
+
+@app.post("/api/admin/login", response_model=schemas.AdminToken)
+def admin_login(login_data: schemas.AdminLogin, db: Session = Depends(database.get_db)):
+    """Authenticate admin and return JWT token."""
+    admin = auth.ensure_admin(db)
+    
+    if not auth.verify_password(login_data.password, admin.password_hash):
+        raise HTTPException(status_code=401, detail="Incorrect password")
+    
+    access_token = auth.create_access_token(data={"sub": "admin"})
+    return {"access_token": access_token, "token_type": "bearer"}
+
+
+@app.post("/api/admin/password")
+def change_admin_password(
+    password_data: schemas.AdminPasswordChange,
+    db: Session = Depends(database.get_db),
+    current_admin: models.Admin = Depends(auth.get_current_admin)
+):
+    """Change admin password."""
+    if not auth.verify_password(password_data.old_password, current_admin.password_hash):
+        raise HTTPException(status_code=401, detail="Incorrect old password")
+    
+    current_admin.password_hash = auth.hash_password(password_data.new_password)
+    db.commit()
+    return {"message": "Password changed successfully"}
+
+
+@app.get("/api/admin/users/{user_id}/rides", response_model=List[schemas.RideOut])
+def get_user_rides_admin(
+    user_id: int,
+    cycle_id: Optional[int] = None,
+    db: Session = Depends(database.get_db),
+    current_admin: models.Admin = Depends(auth.get_current_admin)
+):
+    """Get all rides for a specific user in a cycle (defaults to active cycle)."""
+    if cycle_id:
+        cycle = db.query(models.TankCycle).filter(models.TankCycle.id == cycle_id).first()
+        if not cycle:
+            raise HTTPException(404, "Cycle not found")
+    else:
+        cycle = get_active_cycle(db)
+    
+    rides = db.query(models.Ride).filter(
+        models.Ride.user_id == user_id,
+        models.Ride.tank_cycle_id == cycle.id
+    ).order_by(desc(models.Ride.timestamp)).all()
+    
+    return rides
+
+
+@app.put("/api/admin/rides/{ride_id}", response_model=schemas.RideOut)
+def update_ride_admin(
+    ride_id: int,
+    ride_update: schemas.RideUpdate,
+    db: Session = Depends(database.get_db),
+    current_admin: models.Admin = Depends(auth.get_current_admin)
+):
+    """Update a specific ride."""
+    ride = db.query(models.Ride).filter(models.Ride.id == ride_id).first()
+    if not ride:
+        raise HTTPException(404, "Ride not found")
+    
+    # Calculate missing values using logic
+    distance = ride_update.distance_km if ride_update.distance_km is not None else ride.distance_km
+    consumption = ride_update.consumption_l100km if ride_update.consumption_l100km is not None else ride.consumption_l100km
+    fuel = ride_update.fuel_liters if ride_update.fuel_liters is not None else ride.fuel_liters
+    
+    # Recalculate with new values
+    d, c, f = logic.calculate_ride_data(distance, consumption, fuel)
+    
+    ride.distance_km = d
+    ride.consumption_l100km = c
+    ride.fuel_liters = f
+    
+    db.commit()
+    db.refresh(ride)
+    return ride
+
+
+@app.delete("/api/admin/rides/{ride_id}")
+def delete_ride_admin(
+    ride_id: int,
+    db: Session = Depends(database.get_db),
+    current_admin: models.Admin = Depends(auth.get_current_admin)
+):
+    """Delete a specific ride."""
+    ride = db.query(models.Ride).filter(models.Ride.id == ride_id).first()
+    if not ride:
+        raise HTTPException(404, "Ride not found")
+    
+    db.delete(ride)
+    db.commit()
+    return {"message": "Ride deleted successfully"}
+
+
+@app.delete("/api/admin/cycles/{cycle_id}")
+def delete_cycle_admin(
+    cycle_id: int,
+    db: Session = Depends(database.get_db),
+    current_admin: models.Admin = Depends(auth.get_current_admin)
+):
+    """Delete an entire tank cycle and all associated rides."""
+    cycle = db.query(models.TankCycle).filter(models.TankCycle.id == cycle_id).first()
+    if not cycle:
+        raise HTTPException(404, "Cycle not found")
+    
+    if cycle.is_active:
+        raise HTTPException(400, "Cannot delete active cycle")
+    
+    # Delete all rides in this cycle
+    db.query(models.Ride).filter(models.Ride.tank_cycle_id == cycle_id).delete()
+    
+    # Delete the cycle
+    db.delete(cycle)
+    db.commit()
+    return {"message": "Cycle deleted successfully"}
 
 
 # Static Files (Frontend)
