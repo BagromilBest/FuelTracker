@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAppStore } from '../stores/app';
 
@@ -11,6 +11,16 @@ const password = ref('');
 const error = ref('');
 const loading = ref(false);
 const showAdminLogin = ref(false);
+
+onMounted(async () => {
+  // Fetch users for the login dropdown
+  try {
+    await store.fetchUsers();
+  } catch (e) {
+    // If fetch fails, that's okay - user can try admin login
+    console.error('Failed to fetch users:', e);
+  }
+});
 
 const canSubmit = computed(() => {
   if (showAdminLogin.value) {
