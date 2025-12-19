@@ -1,12 +1,16 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { useAppStore } from '../stores/app';
+import AdminLogin from '../components/AdminLogin.vue';
+import AdminPanel from '../components/AdminPanel.vue';
 
 const store = useAppStore();
 const settingsForm = ref({ currency: 'CZK', fuel_price: 35.5 });
 const userForm = ref({ name: '', color: '#90CAF9' });
 const message = ref('');
 const isError = ref(false);
+const showAdminLogin = ref(false);
+const showAdminPanel = ref(false);
 
 onMounted(() => {
   if (store.settings) {
@@ -49,6 +53,23 @@ async function addUser() {
     message.value = `Error adding user: ${e.response?.data?.detail || e.message || 'Unknown error'}`;
   }
 }
+
+function openAdminLogin() {
+  if (store.isAdminAuthenticated) {
+    showAdminPanel.value = true;
+  } else {
+    showAdminLogin.value = true;
+  }
+}
+
+function handleAdminLoginSuccess() {
+  showAdminLogin.value = false;
+  showAdminPanel.value = true;
+}
+
+function handleAdminPanelClose() {
+  showAdminPanel.value = false;
+}
 </script>
 
 <template>
@@ -70,6 +91,13 @@ async function addUser() {
           </svg>
           <h3>General Settings</h3>
         </div>
+        
+        <button @click="openAdminLogin" class="admin-access-btn" style="margin-bottom: var(--md-spacing-lg);">
+          <svg viewBox="0 0 24 24" fill="none" style="width: 20px; height: 20px; margin-right: 8px;">
+            <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z" fill="currentColor"/>
+          </svg>
+          {{ store.isAdminAuthenticated ? 'Admin Panel' : 'Admin Access' }}
+        </button>
         
         <div class="success-msg" v-if="message && !isError">
           ✓ {{ message }}
@@ -158,6 +186,19 @@ async function addUser() {
         </div>
       </div>
     </div>
+
+    <!-- Admin Login Modal -->
+    <AdminLogin 
+      v-if="showAdminLogin" 
+      @success="handleAdminLoginSuccess"
+      @cancel="showAdminLogin = false"
+    />
+
+    <!-- Admin Panel Modal -->
+    <AdminPanel
+      v-if="showAdminPanel"
+      @close="handleAdminPanelClose"
+    />
   </div>
 </template>
 
@@ -284,5 +325,19 @@ button {
   .settings-grid {
     grid-template-columns: 1fr;
   }
+}
+
+.admin-access-btn {
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+}
+
+.admin-access-btn:hover {
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
 }
 </style>

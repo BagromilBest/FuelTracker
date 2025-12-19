@@ -8,6 +8,7 @@ const cycles = ref([]);
 const selectedCycle = ref(null);
 const stats = ref(null);
 const error = ref('');
+const loading = ref(false);
 
 onMounted(async () => {
   try {
@@ -42,6 +43,34 @@ function formatDate(dateString) {
 function clearSelection() {
   stats.value = null;
   selectedCycle.value = null;
+}
+
+async function deleteCycle(cycleId) {
+  if (!confirm('Are you sure you want to delete this entire tank cycle and all its rides? This action cannot be undone.')) {
+    return;
+  }
+  
+  loading.value = true;
+  try {
+    await api.delete(`/admin/cycles/${cycleId}`, {
+      headers: store.getAdminHeaders()
+    });
+    
+    // Reload cycles
+    const response = await api.get('/cycles');
+    cycles.value = response.data;
+    
+    // Clear selection if deleted cycle was selected
+    if (selectedCycle.value && selectedCycle.value.id === cycleId) {
+      clearSelection();
+    }
+    
+    error.value = '';
+  } catch (e) {
+    error.value = `Failed to delete cycle: ${e.response?.data?.detail || e.message}`;
+  } finally {
+    loading.value = false;
+  }
 }
 </script>
 
@@ -92,16 +121,30 @@ function clearSelection() {
                 </span>
               </td>
               <td>
-                <button 
-                  class="btn-small" 
-                  @click="viewCycleStats(cycle.id)"
-                  :class="{ 'btn-selected': selectedCycle && selectedCycle.id === cycle.id }"
-                >
-                  <svg viewBox="0 0 24 24" fill="none" style="width: 16px; height: 16px;">
-                    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z" fill="currentColor"/>
-                  </svg>
-                  View Stats
-                </button>
+                <div class="action-buttons">
+                  <button 
+                    class="btn-small" 
+                    @click="viewCycleStats(cycle.id)"
+                    :class="{ 'btn-selected': selectedCycle && selectedCycle.id === cycle.id }"
+                    :disabled="loading"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" style="width: 16px; height: 16px;">
+                      <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z" fill="currentColor"/>
+                    </svg>
+                    View Stats
+                  </button>
+                  <button 
+                    v-if="store.isAdminAuthenticated && !cycle.is_active"
+                    class="btn-small btn-danger" 
+                    @click="deleteCycle(cycle.id)"
+                    :disabled="loading"
+                    title="Delete cycle (Admin only)"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" style="width: 16px; height: 16px;">
+                      <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" fill="currentColor"/>
+                    </svg>
+                  </button>
+                </div>
               </td>
             </tr>
           </tbody>
@@ -310,5 +353,22 @@ function clearSelection() {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+}
+
+.action-buttons {
+  display: flex;
+  gap: var(--md-spacing-sm);
+  align-items: center;
+}
+
+.btn-danger {
+  background: var(--md-sys-color-error);
+  color: white;
+  padding: 8px;
+  min-width: auto;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: var(--md-sys-color-error-container);
 }
 </style>
