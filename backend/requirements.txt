@@ -3,5 +3,6 @@ uvicorn[standard]>=0.32.0
 sqlalchemy>=2.0.36
 pydantic>=2.10.0
 python-multipart>=0.0.20
-passlib[bcrypt]>=1.7.4
+passlib>=1.7.4
+bcrypt==3.2.2
 python-jose[cryptography]>=3.4.0

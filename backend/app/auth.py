@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
+import hashlib
 from . import models, database
 
 # Password hashing context
@@ -18,14 +19,39 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 60
 security = HTTPBearer()
 
 
+def _pre_hash_password(password: str) -> str:
+    """Pre-hash password with SHA-256 to handle bcrypt's 72-byte limit.
+    
+    bcrypt has a maximum password length of 72 bytes. To securely support
+    longer passwords without silent truncation, we pre-hash with SHA-256
+    which produces a consistent 64-character hex string (well under 72 bytes).
+    
+    This approach:
+    - Prevents silent truncation of long passwords
+    - Maintains security by using a cryptographic hash
+    - Ensures consistent hashing regardless of password length
+    """
+    return hashlib.sha256(password.encode('utf-8')).hexdigest()
+
+
 def hash_password(password: str) -> str:
-    """Hash a password using bcrypt."""
-    return pwd_context.hash(password)
+    """Hash a password using bcrypt with SHA-256 pre-hashing.
+    
+    Pre-hashes the password with SHA-256 before bcrypt to handle
+    the 72-byte bcrypt limit securely.
+    """
+    pre_hashed = _pre_hash_password(password)
+    return pwd_context.hash(pre_hashed)
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify a password against its hash."""
-    return pwd_context.verify(plain_password, hashed_password)
+    """Verify a password against its hash.
+    
+    Pre-hashes the password with SHA-256 before verification to match
+    the hashing process.
+    """
+    pre_hashed = _pre_hash_password(plain_password)
+    return pwd_context.verify(pre_hashed, hashed_password)
 
 
 def create_access_token(data: dict) -> str:
