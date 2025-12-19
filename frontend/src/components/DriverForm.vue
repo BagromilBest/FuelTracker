@@ -35,12 +35,12 @@ function handleCancel() {
     <div class="modal-content">
       <div class="modal-header">
         <h2>{{ isEdit ? 'Edit Driver' : 'Add New Driver' }}</h2>
-        <button class="close-btn" @click="handleCancel">
-          <svg viewBox="0 0 24 24" fill="none" style="width: 24px; height: 24px;">
-            <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" fill="currentColor"/>
-          </svg>
-        </button>
       </div>
+      <button class="close-btn" @click="handleCancel">
+        <svg viewBox="0 0 24 24" fill="none" style="width: 20px; height: 20px;">
+          <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" fill="currentColor"/>
+        </svg>
+      </button>
       
       <div class="modal-body">
         <div class="form-section">
@@ -118,12 +118,13 @@ function handleCancel() {
   max-width: 500px;
   max-height: 90vh;
   overflow: auto;
+  position: relative;
 }
 
 .modal-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   padding: var(--md-spacing-lg);
   border-bottom: 1px solid var(--md-sys-color-outline-variant);
 }
@@ -131,15 +132,20 @@ function handleCancel() {
 .modal-header h2 {
   margin: 0;
   font-size: 1.5rem;
+  font-weight: 600;
 }
 
 .close-btn {
-  background: transparent;
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: #ef5350;
   border: none;
   cursor: pointer;
-  padding: 8px;
-  border-radius: var(--md-shape-corner-medium);
-  color: var(--md-sys-color-on-surface);
+  width: 40px;
+  height: 40px;
+  border-radius: 0 var(--md-shape-corner-xlarge) 0 0;
+  color: white;
   transition: background 0.2s;
   display: flex;
   align-items: center;
@@ -147,7 +153,7 @@ function handleCancel() {
 }
 
 .close-btn:hover {
-  background: var(--md-sys-color-surface-container-high);
+  background: #d32f2f;
 }
 
 .modal-body {
