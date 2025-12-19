@@ -81,3 +81,20 @@ class CycleStats(BaseModel):
     total_fuel: float
     total_cost: float
     user_stats: List[UserStat]
+
+# --- Admin ---
+class AdminLogin(BaseModel):
+    password: str = Field(min_length=1)
+
+class AdminToken(BaseModel):
+    access_token: str
+    token_type: str
+
+class AdminPasswordChange(BaseModel):
+    old_password: str = Field(min_length=1)
+    new_password: str = Field(min_length=1)
+
+class RideUpdate(BaseModel):
+    distance_km: Optional[float] = Field(None, gt=0)
+    consumption_l100km: Optional[float] = Field(None, gt=0)
+    fuel_liters: Optional[float] = Field(None, gt=0)
