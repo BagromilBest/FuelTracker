@@ -22,7 +22,7 @@ class User(Base):
 class TankCycle(Base):
     __tablename__ = "tank_cycles"
     id = Column(Integer, primary_key=True, index=True)
-    start_date = Column(DateTime, default=datetime.utcnow)
+    start_date = Column(DateTime, default=datetime.now)
     end_date = Column(DateTime, nullable=True)
     is_active = Column(Boolean, default=True)
 
@@ -34,7 +34,7 @@ class Ride(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
     tank_cycle_id = Column(Integer, ForeignKey("tank_cycles.id"))
-    timestamp = Column(DateTime, default=datetime.utcnow)
+    timestamp = Column(DateTime, default=datetime.now)
 
     distance_km = Column(Float)
     consumption_l100km = Column(Float)
