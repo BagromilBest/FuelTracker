@@ -15,9 +15,6 @@ const message = ref('');
 const isError = ref(false);
 const loading = ref(false);
 
-// Track which fields have been manually changed
-const editedFields = ref(new Set());
-
 // Password change form
 const passwordForm = ref({
   old_password: '',
@@ -55,18 +52,14 @@ function startEdit(ride) {
     consumption_l100km: ride.consumption_l100km,
     fuel_liters: ride.fuel_liters
   };
-  editedFields.value = new Set();
 }
 
 function cancelEdit() {
   editingRide.value = null;
   editForm.value = {};
-  editedFields.value = new Set();
 }
 
-function onFieldChange(fieldName) {
-  editedFields.value.add(fieldName);
-  
+function onFieldChange() {
   // Auto-calculate the third value if two are provided
   const { distance_km, consumption_l100km, fuel_liters } = editForm.value;
   
@@ -77,11 +70,11 @@ function onFieldChange(fieldName) {
   const count = [hasDistance, hasConsumption, hasFuel].filter(Boolean).length;
   
   if (count === 2) {
-    // Calculate the missing value
-    if (!hasDistance && hasConsumption && hasFuel) {
+    // Calculate the missing value (with division by zero protection)
+    if (!hasDistance && hasConsumption && hasFuel && consumption_l100km > 0) {
       // Calculate distance: d = (f * 100) / c
       editForm.value.distance_km = parseFloat(((fuel_liters * 100) / consumption_l100km).toFixed(2));
-    } else if (!hasConsumption && hasDistance && hasFuel) {
+    } else if (!hasConsumption && hasDistance && hasFuel && distance_km > 0) {
       // Calculate consumption: c = (f * 100) / d
       editForm.value.consumption_l100km = parseFloat(((fuel_liters * 100) / distance_km).toFixed(2));
     } else if (!hasFuel && hasDistance && hasConsumption) {
@@ -266,15 +259,15 @@ const selectedUserName = computed(() => {
                 <div class="edit-fields">
                   <div class="edit-field">
                     <label>Distance (km)</label>
-                    <input type="number" step="0.1" v-model.number="editForm.distance_km" min="0" @input="onFieldChange('distance_km')">
+                    <input type="number" step="0.1" v-model.number="editForm.distance_km" min="0" @input="onFieldChange">
                   </div>
                   <div class="edit-field">
                     <label>Consumption (L/100km)</label>
-                    <input type="number" step="0.1" v-model.number="editForm.consumption_l100km" min="0" @input="onFieldChange('consumption_l100km')">
+                    <input type="number" step="0.1" v-model.number="editForm.consumption_l100km" min="0" @input="onFieldChange">
                   </div>
                   <div class="edit-field">
                     <label>Fuel (L)</label>
-                    <input type="number" step="0.1" v-model.number="editForm.fuel_liters" min="0" @input="onFieldChange('fuel_liters')">
+                    <input type="number" step="0.1" v-model.number="editForm.fuel_liters" min="0" @input="onFieldChange">
                   </div>
                 </div>
                 <div class="edit-actions">
